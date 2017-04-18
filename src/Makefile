@@ -60,9 +60,27 @@ GTB_BUILD	= ../build/gtb
 # GTB is built as a separate library due to problems with PGO
 GTB_LIBNAME     = libgtb.a
 
+shell        := $(SHELL)
+UNAME        := $(shell uname -s|awk '{print tolower($$0)}')
+ifndef OSTYPE
+OSTYPE       := $(UNAME)
+endif
+ARCH         := $(shell uname -m)
+
+# default to gcc
+ifeq ("$(CC)","cc")
+CC := gcc
+endif
+
+CLANG := $(shell $(CC) -v 2>&1 | grep clang)
+
 # SMP flags (note: we do not support a non-SMP build anymore)
 SMPFLAGS = -DSMP -DSMP_STATS
-SMPLIB   = -lpthread
+ifeq ("android-arm","$(findstring android-arm,$(TARGET))")
+SMPLIB =
+else
+SMPLIB = -lpthread
+endif
 
 PGO_RUN_FLAGS = -H 64M
 
@@ -72,13 +90,6 @@ TUNE_FLAGS := -DTUNE
 #DEBUG   = -g -D_DEBUG=1 -DUNIT_TESTS
 #TRACE    = -D_TRACE=1 -D_THREAD_TRACE
 
-shell        := $(SHELL)
-UNAME        := $(shell uname -s|awk '{print tolower($$0)}')
-ifndef OSTYPE
-OSTYPE       := $(UNAME)
-endif
-ARCH         := $(shell uname -m)
-
 IN_GIT := $(shell git rev-parse --is-inside-work-tree)
 ifeq ("$(IN_GIT)","true")
 ARASAN_VERSION ?= $(shell git describe --tags --always)
@@ -87,21 +98,34 @@ ARASAN_VERSION ?= $(VERSION)
 endif
 CFLAGS := $(CFLAGS) -DARASAN_VERSION=$(ARASAN_VERSION)
 
+ifneq ("android-arm","$(findstring android-arm,$(TARGET))")
 ifeq ("$(ARCH)","x86_64")
-SSE=-msse3
+SSE ?= -msse3
+endif
 endif
 
 LBITS := $(shell getconf LONG_BIT)
 LIBS := -lc -lm
+ifeq ("android-arm","$(findstring android-arm,$(TARGET))")
+ifneq ("$(CLANG)","")
+LIBS += -lstdc++
+endif
+else
+LIBS += -lstdc++
+endif
 
 ifdef NUMA
 LIBS := -lhwloc $(LIBS)
 endif
 
+ifeq ("android-arm","$(findstring android-arm,$(TARGET))")
+ARASANX := arasanx-$(TARGET)
+else
+ARASANX := arasanx-$(OSTYPE)-$(LBITS)
 ifeq ($(LBITS),64)
    CFLAGS := $(CFLAGS) -D_64BIT
 endif
-ARASANX := arasanx-$(LBITS)
+endif
 
 ifeq ("$(CC)","icc")
 # Intel C++ compiler
@@ -119,7 +143,7 @@ PROF_USE = -prof-use -ip -prof-dir $(PROF_DATA)
 
 else
 
-ifeq ("$(CC)","clang")
+ifneq ("$(CLANG)","")
 
 CPP     := $(CC)
 LD      := $(CC)
@@ -134,9 +158,15 @@ OPT     = -O3 -fno-rtti  $(SSE) -DNDEBUG
 GTB_OPT := -O3 $(SSE) -DNDEBUG
 endif
 
+#ifeq ("android-arm","$(findstring android-arm,$(TARGET))")
+#LDFLAGS += -static -stdlib=libc++
+#CFLAGS += -static -stdlib=libc++
+#endif
+
 else
 
-CC ?= g++
+# assume GCC
+
 CPP     := $(CC)
 LD      := $(CC)
 AR      = ar
@@ -158,14 +188,21 @@ else
 $(error GCC version < 4.7 not supported)
 endif
 
+#ifeq ("android-arm","$(findstring android-arm,$(TARGET))")
+#LDFLAGS += -static-libstdc++ -static -static-libgcc
+#CFLAGS += -static
+#endif
+
 endif
 endif
 
+ifneq ("android-arm","$(findstring android-arm,$(TARGET))")
 ifeq ("darwin","$(findstring darwin,$(OSTYPE))")
 CFLAGS := -D_MAC $(CFLAGS)
 LDFLAGS := $(LDFLAGS)
 else
 LIBS := $(LIBS) -lrt
+endif
 endif
 
 default: dirs $(EXPORT)/$(ARASANX)
@@ -173,14 +210,6 @@ default: dirs $(EXPORT)/$(ARASANX)
 tuning: dirs $(EXPORT)/tuner
 
 utils: dirs $(EXPORT)/pgnselect $(EXPORT)/playchess $(EXPORT)/makebook $(EXPORT)/makeeco $(EXPORT)/ecocoder
-
-# Solaris target: note only GCC is supported
-sparc-solaris:
-	@$(MAKE) CC=g++ OPT='$(OPT)' SSE= LIBS='$(LIBS)' CFLAGS='$(CFLAGS)' all
-
-# Arm target on Arm host with GCC
-arm-linux:
-	@$(MAKE) CC=g++ OPT='$(OPT)' SSE= CFLAGS='$(CFLAGS)' all
 
 clean: dirs
 	rm -f $(BUILD)/*.o
@@ -257,6 +286,12 @@ popcnt-profiled: dirs
 
 popcnt: dirs
 	@$(MAKE) ARASANX=$(ARASANX)-popcnt CFLAGS='$(CFLAGS) -DUSE_POPCNT' SSE=-msse4.2
+
+android-arm: dirs
+	@$(MAKE) TARGET=android-arm SSE=
+
+android64-arm: dirs
+	@$(MAKE) TARGET=android-arm64 SSE=
 
 TB_SOURCES=
 TB_OBJS=
@@ -408,22 +443,22 @@ PGNSELECT_OBJS    = $(patsubst %.cpp, $(BUILD)/%.o, $(PGNSELECT_SOURCES)) $(TB_O
 PLAYCHESS_OBJS    = $(patsubst %.cpp, $(BUILD)/%.o, $(PLAYCHESS_SOURCES)) $(TB_OBJS) $(NUMA_OBJS) $(TB_LIBS)
 
 $(EXPORT)/makebook:  $(MAKEBOOK_OBJS)
-	cd $(BUILD) && $(LD) $(LDFLAGS) $(MAKEBOOK_OBJS) $(DEBUG) -o $(EXPORT)/makebook -lstdc++ $(LIBS) $(SMPLIB)
+	cd $(BUILD) && $(LD) $(LDFLAGS) $(MAKEBOOK_OBJS) $(DEBUG) -o $(EXPORT)/makebook $(LIBS) $(SMPLIB)
 
 $(EXPORT)/makeeco:  $(MAKEECO_OBJS)
-	cd $(BUILD) && $(LD) $(LDFLAGS) $(MAKEECO_OBJS) $(DEBUG) -o $(EXPORT)/makeeco -lstdc++ $(LIBS) $(SMPLIB)
+	cd $(BUILD) && $(LD) $(LDFLAGS) $(MAKEECO_OBJS) $(DEBUG) -o $(EXPORT)/makeeco $(LIBS) $(SMPLIB)
 
 $(EXPORT)/ecocoder:  $(ECOCODER_OBJS)
-	cd $(BUILD) && $(LD) $(LDFLAGS) $(ECOCODER_OBJS) $(DEBUG) -o $(EXPORT)/ecocoder -lstdc++ $(LIBS) $(SMPLIB)
+	cd $(BUILD) && $(LD) $(LDFLAGS) $(ECOCODER_OBJS) $(DEBUG) -o $(EXPORT)/ecocoder $(LIBS) $(SMPLIB)
 
 $(EXPORT)/pgnselect:  $(PGNSELECT_OBJS)
-	cd $(BUILD) && $(LD) $(LDFLAGS) $(PGNSELECT_OBJS) $(DEBUG) -o $(EXPORT)/pgnselect -lstdc++ $(LIBS) $(SMPLIB)
+	cd $(BUILD) && $(LD) $(LDFLAGS) $(PGNSELECT_OBJS) $(DEBUG) -o $(EXPORT)/pgnselect $(LIBS) $(SMPLIB)
 
 $(EXPORT)/playchess:  $(PLAYCHESS_OBJS)
-	cd $(BUILD) && $(LD) $(LDFLAGS) $(PLAYCHESS_OBJS) $(DEBUG) -o $(EXPORT)/playchess -lstdc++ $(LIBS) $(SMPLIB)
+	cd $(BUILD) && $(LD) $(LDFLAGS) $(PLAYCHESS_OBJS) $(DEBUG) -o $(EXPORT)/playchess $(LIBS) $(SMPLIB)
 
 $(EXPORT)/tuner:  $(TUNER_OBJS)
-	cd $(TUNE_BUILD) && $(LD) $(LDFLAGS) $(TUNER_OBJS) $(DEBUG) -o $(EXPORT)/tuner -lstdc++ $(LIBS) $(SMPLIB)
+	cd $(TUNE_BUILD) && $(LD) $(LDFLAGS) $(TUNER_OBJS) $(DEBUG) -o $(EXPORT)/tuner $(LIBS) $(SMPLIB)
 
 ifeq ($(PASS),1)
 profile: dirs $(PROFILE)/arasanx
@@ -433,16 +468,16 @@ endif
 
 ifeq ($(PASS),1)
 $(PROFILE)/arasanx:  $(ARASANX_PROFILE_OBJS)
-	cd $(PROFILE) && $(LD) $(PROF_GEN) $(ARASANX_PROFILE_OBJS) $(DEBUG) -o $(PROFILE)/arasanx -lstdc++ $(LIBS) $(SMPLIB)
+	cd $(PROFILE) && $(LD) $(PROF_GEN) $(ARASANX_PROFILE_OBJS) $(DEBUG) -o $(PROFILE)/arasanx $(LIBS) $(SMPLIB)
 else
 ifeq ($(PASS),2)
 $(EXPORT)/$(ARASANX):  $(ARASANX_PROFILE_OBJS)
-	cd $(PROFILE) && $(LD) $(PROF_USE) $(OPT) $(LTO) $(ARASANX_PROFILE_OBJS) $(DEBUG) -o $(PROFILE)/arasanx -lstdc++ $(LIBS) $(SMPLIB)
+	cd $(PROFILE) && $(LD) $(PROF_USE) $(OPT) $(LTO) $(ARASANX_PROFILE_OBJS) $(DEBUG) -o $(PROFILE)/arasanx $(LIBS) $(SMPLIB)
 	cp $(PROFILE)/arasanx $(EXPORT)/$(ARASANX)
 else
 # non-PGO build
 $(EXPORT)/$(ARASANX):  $(ARASANX_OBJS)
-	cd $(BUILD) && $(LD) $(LDFLAGS) $(ARASANX_OBJS) $(DEBUG) -o $(EXPORT)/$(ARASANX) -lstdc++ $(LIBS) $(SMPLIB)
+	cd $(BUILD) && $(LD) $(LDFLAGS) $(ARASANX_OBJS) $(DEBUG) -o $(EXPORT)/$(ARASANX) $(LIBS) $(SMPLIB)
 endif
 endif
 

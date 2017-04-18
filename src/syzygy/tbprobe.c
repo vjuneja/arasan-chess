@@ -134,13 +134,15 @@ unsigned TB_LARGEST = 0;
 #define board(s)                ((uint64_t)1 << (s))
 #ifdef TB_CUSTOM_LSB
 #define lsb(b) TB_CUSTOM_LSB(b)
-#else
+#elif defined(__x86_64__)
 static inline unsigned lsb(uint64_t b)
 {
     size_t idx;
     __asm__("bsfq %1, %0": "=r"(idx): "rm"(b));
     return idx;
 }
+#else
+#warn "no lsb"
 #endif
 #define square(r, f)            (8 * (r) + (f))
 
