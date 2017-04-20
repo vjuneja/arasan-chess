@@ -98,7 +98,9 @@ ARASAN_VERSION ?= $(VERSION)
 endif
 CFLAGS := $(CFLAGS) -DARASAN_VERSION=$(ARASAN_VERSION)
 
-ifneq ("android-arm","$(findstring android-arm,$(TARGET))")
+ifeq ("android-arm","$(findstring android-arm,$(TARGET))")
+CFLAGS += -march=armv5te
+else
 ifeq ("$(ARCH)","x86_64")
 SSE ?= -msse3
 endif
@@ -158,11 +160,6 @@ OPT     = -O3 -fno-rtti  $(SSE) -DNDEBUG
 GTB_OPT := -O3 $(SSE) -DNDEBUG
 endif
 
-#ifeq ("android-arm","$(findstring android-arm,$(TARGET))")
-#LDFLAGS += -static -stdlib=libc++
-#CFLAGS += -static -stdlib=libc++
-#endif
-
 else
 
 # assume GCC
@@ -188,15 +185,16 @@ else
 $(error GCC version < 4.7 not supported)
 endif
 
-#ifeq ("android-arm","$(findstring android-arm,$(TARGET))")
-#LDFLAGS += -static-libstdc++ -static -static-libgcc
-#CFLAGS += -static
-#endif
-
 endif
 endif
 
-ifneq ("android-arm","$(findstring android-arm,$(TARGET))")
+ifeq ("android-arm","$(findstring android-arm,$(TARGET))")
+LDFLAGS += -fPIE -pie
+CFLAGS += -fPIE
+LIBS += -latomic
+OPT += -mthumb
+LTO = -flto
+else
 ifeq ("darwin","$(findstring darwin,$(OSTYPE))")
 CFLAGS := -D_MAC $(CFLAGS)
 LDFLAGS := $(LDFLAGS)
