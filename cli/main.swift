@@ -9,5 +9,5 @@
 import Foundation
 
 print("Hello, World!")
-print(Arasan().mainwithargc(1, argv: ))
+print(Arasan().mainwithargc(0, argv: nil))
 

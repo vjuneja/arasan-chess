@@ -30,6 +30,8 @@ BookReader::~BookReader()
 }
 
 int BookReader::open(const char *pathName) {
+    char *cwd = getcwd(NULL, 0);
+    cerr << cwd;
     if (book_file.is_open()) return 0;
     book_file.open(pathName, ios_base::in | ios_base::binary);
     if (!book_file.is_open()) {
