@@ -172,6 +172,8 @@
 		B0310A6E1FA2034100ED8CDD /* pkgconfig in Sources */ = {isa = PBXBuildFile; fileRef = B000A8AD1F9EFA55005B948E /* pkgconfig */; };
 		B0310A6F1FA2034100ED8CDD /* hwloc-1.11.8 in Sources */ = {isa = PBXBuildFile; fileRef = B000A8AB1F9EF71F005B948E /* hwloc-1.11.8 */; };
 		B0310A701FA208B300ED8CDD /* libhwloc.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B000A8B11F9EFA9E005B948E /* libhwloc.a */; };
+		B0FE162C1FA4FF1400943631 /* book.bin in Sources */ = {isa = PBXBuildFile; fileRef = B0FE162B1FA43FFE00943631 /* book.bin */; };
+		B0FE162D1FA4FF8B00943631 /* book.bin in Sources */ = {isa = PBXBuildFile; fileRef = B0FE162B1FA43FFE00943631 /* book.bin */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -298,6 +300,7 @@
 		B03109FF1FA0482D00ED8CDD /* Arasan.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Arasan.h; sourceTree = "<group>"; };
 		B0310A001FA0BBB500ED8CDD /* cli-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "cli-Bridging-Header.h"; sourceTree = "<group>"; };
 		B0310A011FA0BBB500ED8CDD /* Arasan.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = Arasan.mm; sourceTree = "<group>"; };
+		B0FE162B1FA43FFE00943631 /* book.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = book.bin; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -475,6 +478,7 @@
 			isa = PBXGroup;
 			children = (
 				B03109FA1FA0411D00ED8CDD /* main.swift */,
+				B0FE162B1FA43FFE00943631 /* book.bin */,
 				B03109FF1FA0482D00ED8CDD /* Arasan.h */,
 				B0310A011FA0BBB500ED8CDD /* Arasan.mm */,
 				B0310A001FA0BBB500ED8CDD /* cli-Bridging-Header.h */,
@@ -574,6 +578,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B0FE162D1FA4FF8B00943631 /* book.bin in Sources */,
 				B000A8831F9E19E0005B948E /* bitbase.cpp in Sources */,
 				B000A8931F9E19E0005B948E /* syzygy.cpp in Sources */,
 				B000A87A1F9E19E0005B948E /* bookread.cpp in Sources */,
@@ -619,6 +624,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B0FE162C1FA4FF1400943631 /* book.bin in Sources */,
 				B0310A031FA2034000ED8CDD /* arasanx.cpp in Sources */,
 				B0310A041FA2034000ED8CDD /* arasanx.hpp in Sources */,
 				B0310A051FA2034000ED8CDD /* arasan.rc in Sources */,

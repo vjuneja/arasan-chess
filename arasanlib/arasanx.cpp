@@ -3481,6 +3481,11 @@ static bool do_command(const string &cmd, Board &board) {
  }
              
 int CDECL arasan::arasanmain(int argc, char **argv) {
+    if(argv == NULL) {
+        argv = new char*{""};
+    }
+    
+    
     signal(SIGINT,SIG_IGN);
 
     // Show a message on the console
